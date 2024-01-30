@@ -200,19 +200,19 @@ if __name__ == "__main__":
             wait_for_arduino("u:")
             win2.close()
 
-            if not detection():  # If object is not detected on machine table - raise a value error
+            '''if not detection():  # If object is not detected on machine table - raise a value error
                 win2 = PromptWindow('window_detection.ui')
                 wait_for_signal(win2)
                 win2.close()
                 raise ValueError("Brak wykrycia ciągadła w maszynie")
-                #win2.communicate.buttonClicked.connect(app.quit)
+                #win2.communicate.buttonClicked.connect(app.quit)'''
 
             win2 = ProcessWindow()  # Go downwards to detect object on the table
             wait_for_arduino("d:")
             win2.close()
 
             win2 = ProcessWindow()  # Go upwards with precise amount of steps to prepare for placing graphene powder
-            wait_for_arduino("r2000:")
+            wait_for_arduino("r14000:")
             win2.close()
 
             win2 = PromptWindow('window4.ui')  # Inform about graphene refill
