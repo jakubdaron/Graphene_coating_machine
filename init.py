@@ -20,6 +20,7 @@ class MainWindow(QMainWindow):  # The main window class of the application that 
         self.setup_ui()
         self.setFixedSize(800, 600)
         self.show()
+        self.action = 0
 
     def setup_ui(self):
         self.load_ui()
@@ -31,18 +32,40 @@ class MainWindow(QMainWindow):  # The main window class of the application that 
     def add_button_handler(self):
         button = self.findChild(QPushButton, "pushButton_2")
         button_2 = self.findChild(QPushButton, "pushButton")
+        button_3 = self.findChild(QPushButton, "pushButton_5")
+        button_4 = self.findChild(QPushButton, "pushButton_4")
+        button_5 = self.findChild(QPushButton, "pushButton_3")
 
         if button_2:
             button_2.clicked.connect(self.handle_button_click_2)
         if button:
             button.clicked.connect(self.handle_button_click)
+        if button_3:
+            button_3.clicked.connect(self.handle_button_click_3)
+        if button_4:
+            button_4.clicked.connect(self.handle_button_click_4)
+        if button_5:
+            button_5.clicked.connect(self.handle_button_click_5)
 
     def handle_button_click(self):  # Handler of starting graphene coating proces
         self.communicate.buttonClicked.emit()
+        self.action = 1
 
     def handle_button_click_2(self):  # Handler of closing app button
         self.communicate.buttonClicked.emit()
         sys.exit(0)
+
+    def handle_button_click_3(self):  # Handler of closing app button
+        self.communicate.buttonClicked.emit()
+        self.action = 2
+
+    def handle_button_click_4(self):  # Handler of closing app button
+        self.communicate.buttonClicked.emit()
+        self.action = 3
+
+    def handle_button_click_5(self):  # Handler of closing app button
+        self.communicate.buttonClicked.emit()
+        self.action = 4
 
 
 class PromptWindow(QWidget):  # The prompt window class with button to continue the process
@@ -72,10 +95,12 @@ class PromptWindow(QWidget):  # The prompt window class with button to continue 
 
 
 class ProcessWindow(QWidget):  # Class of processing window
-    def __init__(self, parent=None):
+    def __init__(self, ui_file, parent=None):
         super().__init__(parent)
+        self.setWindowFlags(Qt.WindowMinimizeButtonHint | Qt.CustomizeWindowHint)
+        self.ui_file = ui_file
         self.window = QWidget()
-        loadUi("window6.ui", self)
+        loadUi(self.ui_file, self)
         self.setFixedSize(410, 120)
         self.show()
 
@@ -168,9 +193,10 @@ def wait_for_arduino(func_str):  # Function waiting for signal from arduino
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     win2 = None
+    language = 'PL'
 
     if signal_check() == 0:  # If computer doesn't connect with arduino - display window with error and close
-        win2 = PromptWindow('window1.ui')
+        win2 = PromptWindow('window_signal_check.ui')
         win2.communicate.buttonClicked.connect(app.quit)
         wait_for_signal(win2)
         sys.exit()
@@ -178,7 +204,7 @@ if __name__ == "__main__":
     while True:
 
         try:
-            win = MainWindow('mainwindow.ui')  # Initialisation of main window
+            win = MainWindow(f'windows_{language}/mainwindow.ui')  # Initialisation of main window
             wait_for_signal(win)
             win.setEnabled(False)
 
@@ -188,88 +214,111 @@ if __name__ == "__main__":
             cycles = int(le2.text())
 
             if not (0.5 <= force <= 5.0) or not (1 <= cycles <= 12):  # If variables are different from specified ranges in main window - raise a value error
-                win2 = PromptWindow('window2.ui')
+                win2 = PromptWindow(f'windows_{language}/window_error.ui')
                 wait_for_signal(win2)
                 win2.close()
                 raise ValueError("Nieprawidłowe wartości force lub cycles")
 
-            print("force:", force)
-            print("cycles:", cycles)
+            if win.action == 1:
+                print("force:", force)
+                print("cycles:", cycles)
 
-            win2 = ProcessWindow()  # Go upwards to "base" point with limit switch
-            wait_for_arduino("u:")
-            win2.close()
-
-            '''if not detection():  # If object is not detected on machine table - raise a value error
-                win2 = PromptWindow('window_detection.ui')
-                wait_for_signal(win2)
+                win2 = ProcessWindow(f'windows_{language}/window_info_1.ui')  # Go upwards to "base" point with limit switch
+                wait_for_arduino("u:")
                 win2.close()
-                raise ValueError("Brak wykrycia ciągadła w maszynie")
-                #win2.communicate.buttonClicked.connect(app.quit)'''
 
-            win2 = ProcessWindow()  # Go downwards to detect object on the table
-            wait_for_arduino("d:")
-            win2.close()
+                '''if not detection():  # If object is not detected on machine table - raise a value error
+                    win2 = PromptWindow(f'windows_{language}/window_detection.ui')
+                    wait_for_signal(win2)
+                    win2.close()
+                    raise ValueError("Brak wykrycia ciągadła w maszynie")
+                    #win2.communicate.buttonClicked.connect(app.quit)'''
 
-            win2 = ProcessWindow()  # Go upwards with precise amount of steps to prepare for placing graphene powder
-            wait_for_arduino("r14000:")
-            win2.close()
-
-            win2 = PromptWindow('window4.ui')  # Inform about graphene refill
-            wait_for_signal(win2)
-            win2.close()
-
-            one_rotation = 3200*1.6  # Steps required to make one rotation (including gear ratio)
-            rest = one_rotation % cycles
-
-            for i in range(cycles):  # Including rest from division to divide cycles in most equal way
-                if rest > 0:
-                    steps = int(one_rotation/cycles) + 1
-                    rest -= 1
-                else:
-                    steps = int(one_rotation/cycles)
-
-                print(steps)
-
-                win2 = ProcessWindow()  # Go downwards to detect object on the table
+                win2 = ProcessWindow(f'windows_{language}/window_info_2.ui')  # Go downwards to detect object on the table
                 wait_for_arduino("d:")
                 win2.close()
 
-                win2 = ProcessWindow()  # Perform precise downward movement to get the closest sensor read to given force value
-                wait_for_arduino(f"m{force}:")
-                win2.close()
-
-                win2 = PromptWindow('window3.ui')  # Inform about running up the electrode
-                wait_for_signal(win2)
-                win2.close()
-
-                win2 = ProcessWindow()  # Go upwards with precise amount of steps to make enough space for table spin
+                win2 = ProcessWindow(f'windows_{language}/window_info_4.ui')  # Go upwards with precise amount of steps to prepare for placing graphene powder
                 wait_for_arduino("r14000:")
                 win2.close()
 
-                win2 = ProcessWindow()  # Spin the table with precise amount of steps
-                wait_for_arduino(f"p{steps}:")
+                win2 = PromptWindow(f'windows_{language}/window_refill.ui')  # Inform about graphene refill
+                wait_for_signal(win2)
                 win2.close()
 
-            win2 = ProcessWindow()  # Go downwards to detect object on the table
-            wait_for_arduino("d:")
-            win2.close()
+                one_rotation = 3200 * 1.6  # Steps required to make one rotation (including gear ratio)
+                rest = one_rotation % cycles
 
-            win2 = ProcessWindow()  # Perform precise downward movement to get the closest sensor read to given force value
-            wait_for_arduino(f"m{force}:")
-            win2.close()
+                for i in range(cycles):  # Including rest from division to divide cycles in most equal way
+                    if rest > 0:
+                        steps = int(one_rotation / cycles) + 1
+                        rest -= 1
+                    else:
+                        steps = int(one_rotation / cycles)
 
-            win2 = PromptWindow('window3.ui')  # Inform about running up the electrode
-            wait_for_signal(win2)
-            win2.close()
+                    print(steps)
 
-            win2 = ProcessWindow()  # Go upwards to "base" point with limit switch
-            wait_for_arduino("u:")
-            win2.close()
+                    win2 = ProcessWindow(f'windows_{language}/window_info_2.ui')  # Go downwards to detect object on the table
+                    wait_for_arduino("d:")
+                    win2.close()
 
-            win2 = ProcessWindow()  # Make a full rotation in opposite direction to compensate cycles spins
-            wait_for_arduino(f"p{-1*one_rotation}:")
-            win2.close()
+                    win2 = ProcessWindow(f'windows_{language}/window_info_3.ui')  # Perform precise downward movement to get the closest sensor read to given force value
+                    wait_for_arduino(f"m{force}:")
+                    win2.close()
+
+                    win2 = PromptWindow(f'windows_{language}/window_electrode_run.ui')  # Inform about running up the electrode
+                    wait_for_signal(win2)
+                    win2.close()
+
+                    win2 = ProcessWindow(f'windows_{language}/window_info_5.ui')  # Go upwards with precise amount of steps to make enough space for table spin
+                    wait_for_arduino("r14000:")
+                    win2.close()
+
+                    win2 = ProcessWindow(f'windows_{language}/window_info_6.ui')  # Spin the table with precise amount of steps
+                    wait_for_arduino(f"p{steps}:")
+                    win2.close()
+
+                win2 = ProcessWindow(f'windows_{language}/window_info_2.ui')  # Go downwards to detect object on the table
+                wait_for_arduino("d:")
+                win2.close()
+
+                win2 = ProcessWindow(f'windows_{language}/window_info_3.ui')  # Perform precise downward movement to get the closest sensor read to given force value
+                wait_for_arduino(f"m{force}:")
+                win2.close()
+
+                win2 = PromptWindow(f'windows_{language}/window_electrode_run.ui')  # Inform about running up the electrode
+                wait_for_signal(win2)
+                win2.close()
+
+                win2 = ProcessWindow(f'windows_{language}/window_info_1.ui')  # Go upwards to "base" point with limit switch
+                wait_for_arduino("u:")
+                win2.close()
+
+                win2 = ProcessWindow(f'windows_{language}/window_info_6.ui')  # Make a full rotation in opposite direction to compensate cycles spins
+                wait_for_arduino(f"p{-1 * one_rotation}:")
+                win2.close()
+
+            if win.action == 2:
+                win2 = ProcessWindow(f'windows_{language}/window_info_1.ui')  # Go upwards to "base" point with limit switch
+                wait_for_arduino("u:")
+                win2.close()
+
+            if win.action == 3:
+                print("force:", force)
+
+                win2 = ProcessWindow(f'windows_{language}/window_info_2.ui')  # Go downwards to detect object on the table
+                wait_for_arduino("d:")
+                win2.close()
+
+                win2 = ProcessWindow(f'windows_{language}/window_info_3.ui')  # Perform precise downward movement to get the closest sensor read to given force value
+                wait_for_arduino(f"m{force}:")
+                win2.close()
+
+            if win.action == 4:
+                if language == 'PL':
+                    language = 'EN'
+                elif language == 'EN':
+                    language = 'PL'
 
             win.setEnabled(True)
 
