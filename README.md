@@ -1,3 +1,5 @@
+![429411629_411741121228787_1074731807515884978_n (1)](https://github.com/jakubdaron/Graphene_coating_machine/assets/102093406/480e1f31-6150-4794-ae4f-d809856bea37)
+
 **Graphene coating machine**
 
 In this project we showcase a budget machine for creating graphene coatings on work surfaces of wire forming die based on technology described in patent  PL 239477.
